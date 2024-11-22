@@ -46,14 +46,14 @@ def get_files(func, druid):
         break # exit loop
 
 def harvest_files(start_at=0):
-  with open('report2.csv', mode='r') as file:
+  with open('report.csv', mode='r') as file:
     csv_reader = csv.reader(file)
-    # next(csv_reader) # skip headers
+    next(csv_reader) # skip headers
 
     with open('out.csv', mode='a') as outfile:
       csv_writer = csv.writer(outfile)
-      # if start_at == 0:
-        # csv_writer.writerow(['Druid', 'Filename'])
+      if start_at == 0:
+        csv_writer.writerow(['Druid', 'Filename'])
       for row_index, row in enumerate(csv_reader):
         if row_index >= start_at:
           druid = row[0]
@@ -61,5 +61,3 @@ def harvest_files(start_at=0):
           get_files(lambda image: csv_writer.writerow([druid, image]),  druid)
 
 harvest_files(start_at=0)
-
-# get_files('bb001nx1648')
