@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Your Page Title</title>
+    <style>
+      article {
+        margin: 20px;
+        border-bottom: 1px dotted gray;
+      }
+    </style>
+    <script>
+      let count = 0;
+      const lineregexp = /([^,]*),([^,]*),(.*)/g;
+      function processLine(line) {
+        if (line.startsWith("Druid")) return; // Ignore header
+        count++;
+        if (count > 1000) return;
+        let array = line.split(",", 3);
+        const result = Array.from(line.matchAll(lineregexp))[0];
+        const druid = result[1];
+        const file = result[2];
+        let description = result[3];
+        const article = document.createElement("article");
+        const caption = document.createElement("p");
+
+        description = description.replace(/^"(.*)"$/, "$1");
+
+        caption.textContent = `${druid} ${description}`;
+        const container = document.getElementById("container");
+        const img = document.createElement("img");
+        img.loading = "lazy";
+        img.src = `https://stacks.stanford.edu/image/iiif/${druid}/${file.replace(".jp2", "")}/full/!800,800/0/default.jpg`;
+        article.appendChild(img);
+        article.appendChild(caption);
+        container.appendChild(article);
+      }
+
+      // Function to fetch and stream the text file
+      function fetchAndStreamTextFile(url) {
+        fetch(url)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(
+                `Failed to fetch the file: ${response.statusText}`,
+              );
+            }
+            // Create a reader for the response body
+            return response.body.getReader();
+          })
+          .then((reader) => {
+            const decoder = new TextDecoder("utf-8");
+            let remainder = "";
+
+            function readChunk() {
+              reader
+                .read()
+                .then(({ value: chunk, done }) => {
+                  if (done) {
+                    // If there is a remainder after all chunks are read, process it
+                    if (remainder) {
+                      processLine(remainder);
+                    }
+                    return; // Exit the function when reading is done
+                  }
+
+                  // Decode the current chunk
+                  const text =
+                    remainder + decoder.decode(chunk, { stream: true });
+
+                  // Split the text into lines
+                  const lines = text.split(/\r?\n/);
+
+                  // Save the last partial line to process with the next chunk
+                  remainder = lines.pop();
+
+                  // Process each complete line
+                  lines.forEach((line) => processLine(line));
+
+                  // Read the next chunk
+                  readChunk();
+                })
+                .catch((err) => {
+                  console.error("Error reading chunk:", err);
+                });
+            }
+
+            // Start reading chunks
+            readChunk();
+          })
+          .catch((err) => {
+            console.error("Error fetching and streaming file:", err);
+          });
+      }
+
+      fetchAndStreamTextFile("image_search_output_b.csv");
+    </script>
+  </head>
+  <body>
+    <h1>Images</h1>
+    <section id="container"></section>
+  </body>
+</html>
